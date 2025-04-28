@@ -1,79 +1,22 @@
-import * as t from "io-ts";
 import JSZip from "jszip";
 
-import * as common from "../common";
-
-const IllustPages = t.type({
-  error: t.boolean,
-  message: t.string,
-  body: t.array(
-    t.type({
-      urls: t.type({
-        thumb_mini: t.string,
-        small: t.string,
-        regular: t.string,
-        original: t.string,
-      }),
-      width: t.number,
-      height: t.number,
-    })
-  ),
-});
+import { IllustPages } from "../common/transport";
+import { registerListener } from "../common/chrome";
 
 function basename(path: string) {
   return path.substring(path.lastIndexOf("/") + 1);
 }
 
-function sendMessage<
-  T extends Exclude<common.Message, { payload: any }>["event"]
->(tabId: number, event: T): Promise<common.MessageResponse<T>>;
-function sendMessage<
-  T extends Extract<common.Message, { payload: any }>["event"]
->(
-  tabId: number,
-  event: T,
-  payload: common.Message<T>["payload"]
-): Promise<common.MessageResponse<T>>;
-function sendMessage<T extends common.Event>(
-  tabId: number,
-  event: T,
-  payload?: unknown
-): Promise<common.MessageResponse<T>> {
-  return chrome.tabs.sendMessage<any, common.MessageResponse<T>>(tabId, {
-    event,
-    payload,
-  });
-}
+const currentZip: {
+  filename?: string;
+  zip?: JSZip;
+} = {};
 
-chrome.action.onClicked.addListener(async (tab) => {
-  if (tab.id === undefined) return;
-
-  const { artworksId, json } = await sendMessage(tab.id, "illust-pages");
-
-  const illustPages = IllustPages.decode(json);
-
-  if (illustPages._tag === "Left" || illustPages.right.error) {
-    throw Error("json format invalid");
-  }
-
-  const urls = illustPages.right.body.map(({ urls }) => new URL(urls.original));
-
-  if (urls.length <= 0) {
-    return;
-  }
-
-  const zip = new JSZip();
+async function downloadZip(zip: JSZip, filename?: string) {
   const reader = new FileReader();
 
-  Promise.all(
-    urls.map(async (url) => {
-      const response = await fetch(url);
-      if (response.status === 200)
-        zip.file(basename(new URL(url).pathname), await response.blob());
-      else throw Error("download failed");
-    })
-  )
-    .then(() => zip.generateAsync({ type: "blob" }))
+  zip
+    .generateAsync({ type: "blob" })
     // URL.createObjectURL() is not available in service workers.
     .then((blob) => reader.readAsDataURL(blob));
 
@@ -83,12 +26,75 @@ chrome.action.onClicked.addListener(async (tab) => {
       typeof reader.result === "string"
     ) {
       reader.removeEventListener("loadend", onLoadend);
+      currentZip.zip = undefined;
       chrome.downloads.download({
         url: reader.result,
-        filename: `${artworksId}.zip`,
+        filename: filename ?? currentZip.filename,
         saveAs: true,
       });
     }
   };
   reader.addEventListener("loadend", onLoadend);
-});
+}
+
+async function add(filename: string, urls: URL[]) {
+  if (urls.length <= 0) {
+    return;
+  }
+
+  if (currentZip.zip === undefined) {
+    currentZip.zip = new JSZip();
+    currentZip.filename = filename;
+  }
+
+  await Promise.all(
+    urls.map(async (url) => {
+      const response = await fetch(url);
+      if (response.status === 200)
+        currentZip.zip!.file(basename(url.pathname), await response.blob());
+      else throw Error("download failed");
+    })
+  );
+}
+
+registerListener(
+  "transport:download",
+  async (payload) => {
+    if ("artworksId" in payload) {
+      const { artworksId, json } = payload;
+      const parseResult = IllustPages.decode(json);
+      if (parseResult._tag === "Right" && !parseResult.right.error) {
+        await add(
+          `${artworksId}.zip`,
+          parseResult.right.body.map(({ urls }) => new URL(urls.original))
+        );
+      }
+    }
+
+    if (currentZip.zip) {
+      downloadZip(
+        currentZip.zip,
+        "artworksId" in payload &&
+          `${payload.artworksId}.zip` === currentZip.filename
+          ? undefined
+          : "out.zip"
+      );
+    }
+  },
+  (sender) => sender.tab !== undefined
+);
+
+registerListener(
+  "transport:add",
+  async ({ artworksId, json }) => {
+    const parseResult = IllustPages.decode(json);
+    if (parseResult._tag === "Left" || parseResult.right.error)
+      throw Error("error is found in artworks information");
+
+    add(
+      `${artworksId}.zip`,
+      parseResult.right.body.map(({ urls }) => new URL(urls.original))
+    );
+  },
+  (sender) => sender.tab !== undefined
+);

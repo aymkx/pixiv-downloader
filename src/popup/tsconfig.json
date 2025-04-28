@@ -1,0 +1,11 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "preact",
+        "lib": ["ES2024", "DOM"],
+        "paths": {
+            "*": ["../../node_modules/*"]
+        },
+    },
+}
