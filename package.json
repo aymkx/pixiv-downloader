@@ -1,0 +1,26 @@
+{
+  "name": "pixiv-downloader",
+  "version": "0.1.0",
+  "description": "A simple chrome extension to download pixiv artworks",
+  "license": "ISC",
+  "author": "aymkx",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rm -rf dist/* && npx parcel build manifest.json --no-optimize",
+    "dev": "npx parcel watch manifest.json",
+    "clean": "rm -rf dist/*"
+  },
+  "dependencies": {
+    "io-ts": "^2.2.22",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@parcel/config-webextension": "^2.14.4",
+    "@types/chrome": "^0.0.317",
+    "buffer": "^6.0.3",
+    "parcel": "^2.14.4",
+    "process": "^0.11.10",
+    "typescript": "^5.8.3"
+  }
+}

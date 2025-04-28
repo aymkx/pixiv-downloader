@@ -1,0 +1,42 @@
+{
+    "manifest_version": 3,
+    "name": "Pixiv Downloader",
+    "version": "0.1.0",
+    "description": "A simple extension to download pixiv artworks",
+    "icons": {
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://*.pixiv.net/*"],
+            "js": ["src/content-script/index.ts"]
+        }
+    ],
+    "background": {
+        "service_worker": "src/service-worker/index.ts",
+        "type": "module"
+    },
+    "action": {
+        "default_icon": {
+            "48": "images/icon48.png",
+            "128": "images/icon128.png"
+        }
+    },
+    "permissions": [
+        "declarativeNetRequest",
+        "downloads"
+    ],
+    "host_permissions": [
+        "https://*.pximg.net/"
+    ],
+    "declarative_net_request": {
+        "rule_resources": [
+            {
+                "id": "ruleset_1",
+                "enabled": true,
+                "path": "rules.json"
+            }
+        ]
+    }
+}

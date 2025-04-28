@@ -1,0 +1,373 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "chrome.declarativeNetRequest.DomainType": {
+            "description": "This describes whether the request is first or third party to the frame in which it originated.\nA request is said to be first party if it has the same domain (eTLD+1) as the frame in which the request originated.",
+            "enum": [
+                "firstParty",
+                "thirdParty"
+            ],
+            "type": "string"
+        },
+        "chrome.declarativeNetRequest.HeaderInfo": {
+            "properties": {
+                "excludedValues": {
+                    "description": "If specified, this condition is not matched if the header exists but its value contains at least one element in this list. This uses the same match pattern syntax as `values`.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "header": {
+                    "description": "The name of the header. This condition matches on the name only if both `values` and `excludedValues` are not specified.",
+                    "type": "string"
+                },
+                "values": {
+                    "description": "If specified, this condition matches if the header's value matches at least one pattern in this list. This supports case-insensitive header value matching plus the following constructs:\n\n**'\\*'** : Matches any number of characters.\n\n**'?'** : Matches zero or one character(s).\n\n**'\\*'** and **'?'** can be escaped with a backslash, e.g. **'\\\\\\*'** and **'\\\\?'**",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.HeaderOperation": {
+            "description": "This describes the possible operations for a \"modifyHeaders\" rule.",
+            "enum": [
+                "append",
+                "set",
+                "remove"
+            ],
+            "type": "string"
+        },
+        "chrome.declarativeNetRequest.ModifyHeaderInfo": {
+            "properties": {
+                "header": {
+                    "description": "The name of the header to be modified.",
+                    "type": "string"
+                },
+                "operation": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.HeaderOperation",
+                    "description": "The operation to be performed on a header."
+                },
+                "value": {
+                    "description": "The new value for the header.\nMust be specified for append and set operations.",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.QueryKeyValue": {
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.QueryTransform": {
+            "properties": {
+                "addOrReplaceParams": {
+                    "description": "The list of query key-value pairs to be added or replaced.",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.QueryKeyValue"
+                    },
+                    "type": "array"
+                },
+                "removeParams": {
+                    "description": "The list of query keys to be removed.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.Redirect": {
+            "properties": {
+                "extensionPath": {
+                    "description": "Path relative to the extension directory.\nShould start with '/'.",
+                    "type": "string"
+                },
+                "regexSubstitution": {
+                    "description": "Substitution pattern for rules which specify a regexFilter.\nThe first match of regexFilter within the url will be replaced with this pattern.\nWithin regexSubstitution, backslash-escaped digits (\\1 to \\9) can be used to insert the corresponding capture groups.\n\\0 refers to the entire matching text.",
+                    "type": "string"
+                },
+                "transform": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.URLTransform",
+                    "description": "Url transformations to perform."
+                },
+                "url": {
+                    "description": "The redirect url.\nRedirects to JavaScript urls are not allowed.",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.RequestMethod": {
+            "description": "This describes the HTTP request method of a network request.",
+            "enum": [
+                "connect",
+                "delete",
+                "get",
+                "head",
+                "options",
+                "patch",
+                "post",
+                "put",
+                "other"
+            ],
+            "type": "string"
+        },
+        "chrome.declarativeNetRequest.ResourceType": {
+            "description": "This describes the resource type of the network request.",
+            "enum": [
+                "main_frame",
+                "sub_frame",
+                "stylesheet",
+                "script",
+                "image",
+                "font",
+                "object",
+                "xmlhttprequest",
+                "ping",
+                "csp_report",
+                "media",
+                "websocket",
+                "webtransport",
+                "webbundle",
+                "other"
+            ],
+            "type": "string"
+        },
+        "chrome.declarativeNetRequest.RuleAction": {
+            "properties": {
+                "redirect": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.Redirect",
+                    "description": "Describes how the redirect should be performed.\nOnly valid for redirect rules."
+                },
+                "requestHeaders": {
+                    "description": "The request headers to modify for the request.\nOnly valid if RuleActionType is \"modifyHeaders\".",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.ModifyHeaderInfo"
+                    },
+                    "type": "array"
+                },
+                "responseHeaders": {
+                    "description": "The response headers to modify for the request.\nOnly valid if RuleActionType is \"modifyHeaders\".",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.ModifyHeaderInfo"
+                    },
+                    "type": "array"
+                },
+                "type": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.RuleActionType",
+                    "description": "The type of action to perform."
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.RuleActionType": {
+            "description": "Describes the kind of action to take if a given RuleCondition matches.",
+            "enum": [
+                "block",
+                "redirect",
+                "allow",
+                "upgradeScheme",
+                "modifyHeaders",
+                "allowAllRequests"
+            ],
+            "type": "string"
+        },
+        "chrome.declarativeNetRequest.RuleCondition": {
+            "properties": {
+                "domainType": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.DomainType",
+                    "description": "Specifies whether the network request is first-party or third-party to the domain from which it originated.\nIf omitted, all requests are accepted."
+                },
+                "domains": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "excludedDomains": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "excludedInitiatorDomains": {
+                    "description": "The rule will not match network requests originating from the list of excludedInitiatorDomains.\nIf the list is empty or omitted, no domains are excluded.\nThis takes precedence over initiatorDomains.\n\nNotes:\nSub-domains like \"a.example.com\" are also allowed.\nThe entries must consist of only ascii characters.\nUse punycode encoding for internationalized domains.\nThis matches against the request initiator and not the request url.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "excludedRequestDomains": {
+                    "description": "The rule will not match network requests when the domains matches one from the list of excludedRequestDomains.\nIf the list is empty or omitted, no domains are excluded.\nThis takes precedence over requestDomains.\n\nNotes:\nSub-domains like \"a.example.com\" are also allowed.\nThe entries must consist of only ascii characters.\nUse punycode encoding for internationalized domains.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "excludedRequestMethods": {
+                    "description": "List of request methods which the rule won't match.\nOnly one of requestMethods and excludedRequestMethods should be specified.\nIf neither of them is specified, all request methods are matched.",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.RequestMethod"
+                    },
+                    "type": "array"
+                },
+                "excludedResourceTypes": {
+                    "description": "List of resource types which the rule won't match.\nOnly one of {@link chrome.declarativeNetRequest.RuleCondition.resourceTypes}\nand {@link chrome.declarativeNetRequest.RuleCondition.excludedResourceTypes} should be specified.\nIf neither of them is specified, all resource types except \"main_frame\" are blocked.",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.ResourceType"
+                    },
+                    "type": "array"
+                },
+                "excludedResponseHeaders": {
+                    "description": "Rule does not match if the request matches any response header condition in this list (if specified). If both `excludedResponseHeaders` and `responseHeaders` are specified, then the `excludedResponseHeaders` property takes precedence.",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.HeaderInfo"
+                    },
+                    "type": "array"
+                },
+                "excludedTabIds": {
+                    "description": "List of {@link chrome.tabs.Tab.id} which the rule should not match.\nAn ID of {@link chrome.tabs.TAB_ID_NONE} excludes requests which don't originate from a tab.\nOnly supported for session-scoped rules.",
+                    "items": {
+                        "type": "number"
+                    },
+                    "type": "array"
+                },
+                "initiatorDomains": {
+                    "description": "The rule will only match network requests originating from the list of initiatorDomains.\nIf the list is omitted, the rule is applied to requests from all domains.\nAn empty list is not allowed.\n\nNotes:\nSub-domains like \"a.example.com\" are also allowed.\nThe entries must consist of only ascii characters.\nUse punycode encoding for internationalized domains.\nThis matches against the request initiator and not the request url.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "isUrlFilterCaseSensitive": {
+                    "default": "false Before Chrome 118 the default was true.",
+                    "description": "Whether the urlFilter or regexFilter (whichever is specified) is case sensitive.",
+                    "type": "boolean"
+                },
+                "regexFilter": {
+                    "description": "Regular expression to match against the network request url.\nThis follows the RE2 syntax.\n\nNote: Only one of urlFilter or regexFilter can be specified.\n\nNote: The regexFilter must be composed of only ASCII characters.\nThis is matched against a url where the host is encoded in the punycode format (in case of internationalized domains) and any other non-ascii characters are url encoded in utf-8.",
+                    "type": "string"
+                },
+                "requestDomains": {
+                    "description": "The rule will only match network requests when the domain matches one from the list of requestDomains.\nIf the list is omitted, the rule is applied to requests from all domains.\nAn empty list is not allowed.\n\nNotes:\nSub-domains like \"a.example.com\" are also allowed.\nThe entries must consist of only ascii characters.\nUse punycode encoding for internationalized domains.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "requestMethods": {
+                    "description": "List of HTTP request methods which the rule can match. An empty list is not allowed.\nNote: Specifying a {@link chrome.declarativeNetRequest.RuleCondition.requestMethods} rule condition will also exclude non-HTTP(s) requests,\nwhereas specifying {@link chrome.declarativeNetRequest.RuleCondition.excludedRequestMethods} will not.",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.RequestMethod"
+                    },
+                    "type": "array"
+                },
+                "resourceTypes": {
+                    "description": "List of resource types which the rule can match.\nAn empty list is not allowed.\n\nNote: this must be specified for allowAllRequests rules and may only include the sub_frame and main_frame resource types.",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.ResourceType"
+                    },
+                    "type": "array"
+                },
+                "responseHeaders": {
+                    "description": "Rule matches if the request matches any response header condition in this list (if specified).",
+                    "items": {
+                        "$ref": "#/definitions/chrome.declarativeNetRequest.HeaderInfo"
+                    },
+                    "type": "array"
+                },
+                "tabIds": {
+                    "description": "List of {@link chrome.tabs.Tab.id} which the rule should not match.\nAn ID of {@link chrome.tabs.TAB_ID_NONE} excludes requests which don't originate from a tab.\nAn empty list is not allowed. Only supported for session-scoped rules.",
+                    "items": {
+                        "type": "number"
+                    },
+                    "type": "array"
+                },
+                "urlFilter": {
+                    "description": "The pattern which is matched against the network request url.\nSupported constructs:\n\n'*' : Wildcard: Matches any number of characters.\n\n'|' : Left/right anchor: If used at either end of the pattern, specifies the beginning/end of the url respectively.\n\n'||' : Domain name anchor: If used at the beginning of the pattern, specifies the start of a (sub-)domain of the URL.\n\n'^' : Separator character: This matches anything except a letter, a digit or one of the following: _ - . %.\nThis can also match the end of the URL.\n\nTherefore urlFilter is composed of the following parts: (optional Left/Domain name anchor) + pattern + (optional Right anchor).\n\nIf omitted, all urls are matched. An empty string is not allowed.\n\nA pattern beginning with || is not allowed. Use instead.\n\nNote: Only one of urlFilter or regexFilter can be specified.\n\nNote: The urlFilter must be composed of only ASCII characters.\nThis is matched against a url where the host is encoded in the punycode format (in case of internationalized domains) and any other non-ascii characters are url encoded in utf-8.\nFor example, when the request url is http://abc.рф?q=ф, the urlFilter will be matched against the url http://abc.xn--p1ai/?q=%D1%84.",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.URLTransform": {
+            "properties": {
+                "fragment": {
+                    "description": "The new fragment for the request.\nShould be either empty, in which case the existing fragment is cleared; or should begin with '#'.",
+                    "type": "string"
+                },
+                "host": {
+                    "description": "The new host for the request.",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "The new password for the request.",
+                    "type": "string"
+                },
+                "path": {
+                    "description": "The new path for the request.\nIf empty, the existing path is cleared.",
+                    "type": "string"
+                },
+                "port": {
+                    "description": "The new port for the request.\nIf empty, the existing port is cleared.",
+                    "type": "string"
+                },
+                "query": {
+                    "description": "The new query for the request.\nShould be either empty, in which case the existing query is cleared; or should begin with '?'.",
+                    "type": "string"
+                },
+                "queryTransform": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.QueryTransform",
+                    "description": "Add, remove or replace query key-value pairs."
+                },
+                "scheme": {
+                    "description": "The new scheme for the request.\nAllowed values are \"http\", \"https\", \"ftp\" and \"chrome-extension\".",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "The new username for the request.",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "chrome.declarativeNetRequest.Rule": {
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.RuleAction",
+                    "description": "The action to take if this rule is matched."
+                },
+                "condition": {
+                    "$ref": "#/definitions/chrome.declarativeNetRequest.RuleCondition",
+                    "description": "The condition under which this rule is triggered."
+                },
+                "id": {
+                    "description": "An id which uniquely identifies a rule.\nMandatory and should be >= 1.",
+                    "type": "number"
+                },
+                "priority": {
+                    "description": "Rule priority.\nDefaults to 1.\nWhen specified, should be >= 1.",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "items": {
+        "$ref": "#/definitions/chrome.declarativeNetRequest.Rule"
+    },
+    "type": "array",
+    "$comment": "This schema is generated from @types/chrome."
+}
