@@ -7,12 +7,7 @@ function basename(path: string) {
   return path.substring(path.lastIndexOf("/") + 1);
 }
 
-const currentZip: {
-  filename?: string;
-  zip?: JSZip;
-} = {};
-
-async function downloadZip(zip: JSZip, filename?: string) {
+function downloadZip(zip: JSZip, filename: string) {
   const reader = new FileReader();
 
   zip
@@ -21,80 +16,61 @@ async function downloadZip(zip: JSZip, filename?: string) {
     .then((blob) => reader.readAsDataURL(blob));
 
   const onLoadend = () => {
-    if (
-      reader.readyState === reader.DONE &&
-      typeof reader.result === "string"
-    ) {
-      reader.removeEventListener("loadend", onLoadend);
-      currentZip.zip = undefined;
+    if (reader.readyState === reader.DONE && typeof reader.result === "string")
       chrome.downloads.download({
         url: reader.result,
-        filename: filename ?? currentZip.filename,
+        filename,
         saveAs: true,
       });
-    }
   };
   reader.addEventListener("loadend", onLoadend);
 }
 
-async function add(filename: string, urls: URL[]) {
-  if (urls.length <= 0) {
-    return;
-  }
-
-  if (currentZip.zip === undefined) {
-    currentZip.zip = new JSZip();
-    currentZip.filename = filename;
-  }
-
-  await Promise.all(
-    urls.map(async (url) => {
-      const response = await fetch(url);
-      if (response.status === 200)
-        currentZip.zip!.file(basename(url.pathname), await response.blob());
-      else throw Error("download failed");
-    })
-  );
-}
+chrome.runtime.onInstalled.addListener(() => chrome.storage.local.clear());
+chrome.runtime.onStartup.addListener(() => chrome.storage.local.clear());
 
 registerListener(
   "transport:download",
   async (payload) => {
-    if ("artworksId" in payload) {
-      const { artworksId, json } = payload;
-      const parseResult = IllustPages.decode(json);
-      if (parseResult._tag === "Right" && !parseResult.right.error) {
-        await add(
-          `${artworksId}.zip`,
-          parseResult.right.body.map(({ urls }) => new URL(urls.original))
-        );
-      }
-    }
-
-    if (currentZip.zip) {
-      downloadZip(
-        currentZip.zip,
-        "artworksId" in payload &&
-          `${payload.artworksId}.zip` === currentZip.filename
-          ? undefined
-          : "out.zip"
-      );
-    }
-  },
-  (sender) => sender.tab !== undefined
-);
-
-registerListener(
-  "transport:add",
-  async ({ artworksId, json }) => {
+    const { illustId, json } = payload;
     const parseResult = IllustPages.decode(json);
-    if (parseResult._tag === "Left" || parseResult.right.error)
-      throw Error("error is found in artworks information");
+    if (parseResult._tag === "Left" || parseResult.right.error) {
+      return;
+    }
+    const zip = new JSZip();
 
-    add(
-      `${artworksId}.zip`,
-      parseResult.right.body.map(({ urls }) => new URL(urls.original))
+    await Promise.all(
+      parseResult.right.body.map(async ({ urls }) => {
+        const url = new URL(urls.original);
+        const resp = await fetch(url);
+        if (resp.status === 200)
+          zip.file(basename(url.pathname), await resp.blob());
+        else throw new Error("download failed");
+      })
     );
+
+    downloadZip(zip, `${illustId}.zip`);
   },
   (sender) => sender.tab !== undefined
 );
+
+registerListener("transport:save", async ({ illusts, ...options }) => {
+  const zip = new JSZip();
+  await Promise.all(
+    illusts.flatMap(({ illustId, artworksInfo }) => {
+      return artworksInfo.map(async ({ urls }) => {
+        const url = new URL(urls.original);
+        const resp = await fetch(url);
+        if (resp.status === 200) {
+          const name = basename(url.pathname);
+          zip.file(
+            options.subfolder ? [illustId, name].join("/") : name,
+            await resp.blob()
+          );
+        } else throw new Error(`download image failed: ${urls.original}`);
+      });
+    })
+  );
+
+  downloadZip(zip, "out.zip");
+});

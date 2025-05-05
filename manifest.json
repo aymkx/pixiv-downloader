@@ -27,7 +27,8 @@
     "permissions": [
         "activeTab",
         "declarativeNetRequest",
-        "downloads"
+        "downloads",
+        "storage"
     ],
     "host_permissions": [
         "https://*.pximg.net/"

@@ -1,7 +1,8 @@
-import { sendMessageToCS } from "./chrome";
+import { getTab } from "./chrome";
+import { AllKeys } from "./util";
 
 const prefix = "popup";
-const button = ["add", "download"] as const;
+const button = ["add", "download", "clear"] as const;
 const eventType = ["click"] as const;
 
 export type Button = (typeof button)[number];
@@ -10,7 +11,7 @@ export type PopupUIEvent<
   B extends Button = Button,
   T extends EventType = EventType
 > = {
-  [K in `${B}:${T}`]: `${typeof prefix}:${Button}:${EventType}`;
+  [_ in `${B}:${T}`]: `${typeof prefix}:${Button}:${EventType}`;
 }[`${B}:${T}`];
 
 export type PopupUIMessage<T extends PopupUIEvent = PopupUIEvent> = {
@@ -19,9 +20,23 @@ export type PopupUIMessage<T extends PopupUIEvent = PopupUIEvent> = {
   };
 }[T];
 
-export function onClick(button: Button) {
-  sendMessageToCS({
-    event: `${prefix}:${button}:click`,
-  });
-  return true;
+export type PopupUIResponse<T extends PopupUIEvent> = AllKeys<
+  PopupUIEvent,
+  {}
+>[T];
+
+export async function sendMessageToContentScript(
+  button: Button,
+  eventType: EventType
+) {
+  const tab = await getTab();
+  if (tab.id) {
+    return await chrome.tabs.sendMessage<
+      PopupUIMessage,
+      PopupUIResponse<PopupUIEvent<typeof button>>
+    >(tab.id, {
+      event: `${prefix}:${button}:${eventType}`,
+    });
+  }
+  throw new Error("tab id missing");
 }

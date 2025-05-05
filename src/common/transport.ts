@@ -1,19 +1,22 @@
 import * as t from "io-ts";
 import { ExactKeys, Solve } from "./util";
 
-export type TransportEvent = "transport:download" | "transport:add";
+export type TransportEvent = "transport:download" | "transport:save";
 
 type MessageFormatMap = ExactKeys<
   TransportEvent,
   {
-    "transport:download":
-      | {
-          artworksId: string;
-          json: unknown;
-          response: Response;
-        }
-      | {};
-    "transport:add": { artworksId: string; json: unknown; response: Response };
+    "transport:download": {
+      illustId: string;
+      json: unknown;
+    };
+    "transport:save": {
+      illusts: {
+        illustId: string;
+        artworksInfo: t.TypeOf<typeof IllustPages.props.body>;
+      }[];
+      subfolder?: boolean;
+    };
   }
 >;
 
@@ -30,15 +33,45 @@ type ResultMap = ExactKeys<
   TransportEvent,
   {
     "transport:download": undefined;
-    "transport:add": undefined;
+    "transport:save": undefined;
   }
 >;
 export type TransportResponse<K extends TransportEvent> = ResultMap[K];
 
-export const IllustPages = t.type({
-  error: t.boolean,
-  message: t.string,
-  body: t.array(
+function pixivAjaxResponseBodyType<T extends t.Mixed>(
+  body: T
+): t.TypeC<{
+  error: t.BooleanC;
+  message: t.StringC;
+  body: T;
+}>;
+function pixivAjaxResponseBodyType<T extends t.Props, P extends t.Props>(
+  body: t.TypeC<T>,
+  partial: t.TypeC<P> | t.PartialC<P>
+): t.TypeC<{
+  error: t.BooleanC;
+  message: t.StringC;
+  body: t.IntersectionC<[t.TypeC<T>, t.PartialC<P>]>;
+}>;
+function pixivAjaxResponseBodyType<T extends t.Mixed, P extends t.Props>(
+  body: T,
+  partial?: t.TypeC<P> | t.PartialC<P>
+) {
+  return t.type({
+    error: t.boolean,
+    message: t.string,
+    body:
+      partial === undefined
+        ? body
+        : t.intersection([
+            body,
+            partial._tag === "PartialType" ? partial : t.partial(partial.props),
+          ]),
+  });
+}
+
+export const IllustPages = pixivAjaxResponseBodyType(
+  t.array(
     t.type({
       urls: t.type({
         thumb_mini: t.string,
@@ -49,5 +82,21 @@ export const IllustPages = t.type({
       width: t.number,
       height: t.number,
     })
-  ),
-});
+  )
+);
+
+export const IllustInfo = pixivAjaxResponseBodyType(
+  t.type({
+    illustId: t.string,
+    illustTitle: t.string,
+    id: t.string,
+    title: t.string,
+  }),
+  t.partial({
+    extraData: t.type({
+      meta: t.type({
+        canonical: t.string,
+      }),
+    }),
+  })
+);
