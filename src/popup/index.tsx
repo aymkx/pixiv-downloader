@@ -1,4 +1,3 @@
-import * as t from "io-ts";
 import { render } from "preact";
 import {
   ButtonHTMLAttributes,
@@ -7,11 +6,9 @@ import {
   useState,
 } from "preact/compat";
 import { Button, sendMessageToContentScript } from "../common/popup";
-import { IllustInfo, IllustPages } from "../common/transport";
 import {
   clearStoredIllusts,
   getIllustsInStore,
-  Properties,
   registerChangeHookOfStore,
   sendMessage,
   setIllustPropertiesInStore,
