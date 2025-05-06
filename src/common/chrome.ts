@@ -184,5 +184,5 @@ export function registerChangeHookOfStore(
 }
 
 export function clearStoredIllusts() {
-  chrome.storage.local.set({ illusts: {} });
+  chrome.storage.local.remove(["illusts", "properties"]);
 }
