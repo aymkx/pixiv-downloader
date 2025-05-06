@@ -42,9 +42,7 @@ function List(): ReactElement {
   useEffect(() => {
     let isMounted = true;
     getIllustsInStore().then((a) => isMounted && setState(a));
-    const remove = registerChangeHookOfStore((change) =>
-      setState(change.newValue)
-    );
+    const remove = registerChangeHookOfStore((s) => setState(s));
 
     return () => {
       isMounted = false;
@@ -99,13 +97,17 @@ function App(): ReactElement {
         if (Object.keys(illusts).length === 0) {
           sendMessageToContentScript("download", "click");
         } else {
-          const list = Object.entries(illusts).map(([k, v]) => ({
-            illustId: k,
-            artworksInfo: v.artworks,
-          }));
-          sendMessage("transport:save", {
-            illusts: list,
-          });
+          const list = Object.entries(illusts)
+            .filter(([_, v]) => !Boolean(v.properties.omit))
+            .map(([k, v]) => ({
+              illustId: k,
+              artworksInfo: v.artworks,
+            }));
+          if (list.length > 0)
+            sendMessage("transport:save", {
+              illusts: list,
+            });
+          else alert("no illusts to be downloaded");
         }
       },
     },

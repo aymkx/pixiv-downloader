@@ -103,11 +103,13 @@ export async function getIllustsInStore(): Promise<
     >;
     properties: Record<string, Partial<Properties>>;
   }>({ illusts: {}, properties: {} });
-  return Object.fromEntries(
-    Object.entries(illusts).map(([k, v]) => [
-      k,
-      { ...v, properties: properties[k] ?? {} },
-    ])
+  return (
+    Object.fromEntries(
+      Object.entries(illusts).map(([k, v]) => [
+        k,
+        { ...v, properties: properties[k] ?? {} },
+      ])
+    ) ?? {}
   );
 }
 
@@ -143,14 +145,16 @@ export async function setIllustPropertiesInStore(
 }
 
 export function registerChangeHookOfStore(
-  hook: (_: chrome.storage.StorageChange) => void
+  hook: ReturnType<typeof getIllustsInStore> extends Promise<infer R>
+    ? (_: R) => void
+    : never
 ): () => void {
-  const listener = (
+  const listener = async (
     changes: Record<string, chrome.storage.StorageChange>,
     area: chrome.storage.AreaName
   ) => {
     if (area !== "local") return;
-    if ("illusts" in changes) hook(changes.illusts);
+    if ("illusts" in changes) hook(await getIllustsInStore());
   };
   chrome.storage.onChanged.addListener(listener);
 
