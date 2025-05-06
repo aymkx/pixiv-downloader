@@ -1,5 +1,5 @@
 import { sendMessageToContentScript } from "./chrome";
-import { basename } from "./util";
+import { basename, validateIllustUrl } from "./util";
 
 const contextMenus = ["add"] as const;
 type ContextMenus = (typeof contextMenus)[number];
@@ -12,11 +12,12 @@ export const contextMenusProperties: Partial<
     contexts: ["link"],
     onclick: (info, tab) => {
       if (info.linkUrl && tab.id) {
-        const illustId = basename(new URL(info.linkUrl).pathname);
-        const num = Number(illustId);
-        if (!isNaN(num) && num > 0)
-          sendMessageToContentScript(tab.id, "add", { illustId });
-        else console.warn("This page is not pixiv illust.");
+        const url = new URL(info.linkUrl);
+        if (validateIllustUrl(url))
+          sendMessageToContentScript(tab.id, "add", {
+            illustId: basename(url.pathname),
+          });
+        else console.info(`The page is not pixiv illust: ${info.linkUrl}`);
       }
     },
   },

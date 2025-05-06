@@ -5,7 +5,7 @@ import {
   useEffect,
   useState,
 } from "preact/compat";
-import { Button, sendCurrentTabAs } from "../common/popup";
+import { Button, sendCurrentTabAs } from "./popup";
 import {
   clearStoredIllusts,
   getIllustsInStore,
