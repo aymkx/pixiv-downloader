@@ -7,12 +7,14 @@ import {
   useState,
 } from "preact/compat";
 import { Button, sendMessageToContentScript } from "../common/popup";
-import { IllustInfo } from "../common/transport";
+import { IllustInfo, IllustPages } from "../common/transport";
 import {
   clearStoredIllusts,
   getIllustsInStore,
+  Properties,
   registerChangeHookOfStore,
   sendMessage,
+  setIllustPropertiesInStore,
 } from "../common/chrome";
 
 function Button({
@@ -20,22 +22,30 @@ function Button({
   ...props
 }: { variant: string } & ButtonHTMLAttributes): ReactElement {
   return (
-    <button class={["btn", `btn-${variant}`].join(" ")} {...props}>
+    <button
+      type="button"
+      class={["btn", `btn-${variant}`, "text-nowrap", "mx-1"].join(" ")}
+      {...props}
+    >
       {props.children}
     </button>
   );
 }
 
+const checkboxId = (illustId: string) => `checkbox-${illustId}`;
+
 function List(): ReactElement {
   const [state, setState] = useState<
-    Record<string, { info: t.TypeOf<typeof IllustInfo.props.body> }>
+    ReturnType<typeof getIllustsInStore> extends Promise<infer R> ? R : never
   >({});
+
   useEffect(() => {
     let isMounted = true;
     getIllustsInStore().then((a) => isMounted && setState(a));
     const remove = registerChangeHookOfStore((change) =>
       setState(change.newValue)
     );
+
     return () => {
       isMounted = false;
       remove();
@@ -43,12 +53,30 @@ function List(): ReactElement {
   }, []);
 
   return (
-    <ul class={"list-group"}>
-      {Object.values(state).map(({ info }) => (
-        <li class={"list-group-item"}>
-          <a href={info.extraData?.meta.canonical}>{info.illustTitle}</a>
-        </li>
-      ))}
+    <ul id="list" class={["list-group"].join(" ")}>
+      {Object.entries(state)
+        .toSorted(([_, { _serial: a }], [__, { _serial: b }]) => a - b)
+        .map(([illustId, { artworks, info, properties }]) => {
+          return (
+            <li class={["list-group-item"].join(" ")}>
+              <input
+                type="checkbox"
+                id={checkboxId(illustId)}
+                checked={!Boolean(properties.omit)}
+                onChange={(e) =>
+                  setIllustPropertiesInStore(illustId, {
+                    omit: !e.currentTarget.checked,
+                  })
+                }
+              />
+              <a
+                href={info.extraData?.meta.canonical}
+                target="_blank"
+                class="text-wrap"
+              >{`${info.alt} (${illustId})`}</a>
+            </li>
+          );
+        })}
     </ul>
   );
 }
@@ -71,12 +99,13 @@ function App(): ReactElement {
         if (Object.keys(illusts).length === 0) {
           sendMessageToContentScript("download", "click");
         } else {
+          const list = Object.entries(illusts).map(([k, v]) => ({
+            illustId: k,
+            artworksInfo: v.artworks,
+          }));
           sendMessage("transport:save", {
-            illusts: Object.entries(illusts).map(([k, v]) => {
-              return { illustId: k, artworksInfo: v.artworks };
-            }),
+            illusts: list,
           });
-          clearStoredIllusts();
         }
       },
     },
@@ -88,31 +117,24 @@ function App(): ReactElement {
   } as const;
 
   return (
-    <div class={["container"].join(" ")}>
-      <div class={["row", "g-2"].join(" ")}>
-        <div class="form-check">
-          <input
-            class="form-checkbox-input"
-            type="checkbox"
-            id="subfolders"
-            value=""
-          />
-          <label class="form-checkbox-label" for="subfolders">
-            Put artworks in subfolders
-          </label>
-        </div>
+    <>
+      <div class="form-check my-1">
+        <input class="form-checkbox-input" type="checkbox" id="subfolders" />
+        <label class="form-checkbox-label" for="subfolders">
+          Put artworks in subfolders
+        </label>
+      </div>
+      <div class="my-1">
         <List />
       </div>
-      <div class={["row", "g-2"].join(" ")}>
+      <div class="flex">
         {Object.entries(buttons).map(([_, v]) => (
-          <div class={["col", "text-nowrap"].join(" ")}>
-            <Button variant={v.style} onClick={v.onClick}>
-              {v.text}
-            </Button>
-          </div>
+          <Button variant={v.style} onClick={v.onClick}>
+            {v.text}
+          </Button>
         ))}
       </div>
-    </div>
+    </>
   );
 }
 

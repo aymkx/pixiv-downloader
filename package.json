@@ -16,13 +16,17 @@
   },
   "devDependencies": {
     "@parcel/config-webextension": "^2.14.4",
+    "@tailwindcss/postcss": "^4.1.5",
+    "@types/bootstrap": "^5.2.10",
     "@types/chrome": "^0.0.317",
+    "bootstrap": "^5.3.5",
     "buffer": "^6.0.3",
     "io-ts": "^2.2.22",
     "jszip": "^3.10.1",
     "parcel": "^2.14.4",
     "preact": "^10.26.5",
     "process": "^0.11.10",
+    "tailwindcss": "^4.1.5",
     "typescript": "^5.8.3"
   }
 }

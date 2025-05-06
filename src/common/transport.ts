@@ -91,6 +91,7 @@ export const IllustInfo = pixivAjaxResponseBodyType(
     illustTitle: t.string,
     id: t.string,
     title: t.string,
+    alt: t.string,
   }),
   t.partial({
     extraData: t.type({

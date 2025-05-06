@@ -77,25 +77,38 @@ export function registerListener<E extends Event>(
   );
 }
 
+export interface Properties {
+  omit: boolean;
+}
+
 export async function getIllustsInStore(): Promise<
   Record<
     string,
     {
       artworks: t.TypeOf<typeof IllustPages.props.body>;
       info: t.TypeOf<typeof IllustInfo.props.body>;
+      _serial: number;
+      properties: Partial<Properties>;
     }
   >
 > {
-  const { illusts } = await chrome.storage.local.get<{
-    illusts?: Record<
+  const { illusts, properties } = await chrome.storage.local.get<{
+    illusts: Record<
       string,
       {
         artworks: t.TypeOf<typeof IllustPages.props.body>;
         info: t.TypeOf<typeof IllustInfo.props.body>;
+        _serial: number;
       }
     >;
-  }>("illusts");
-  return illusts ?? {};
+    properties: Record<string, Partial<Properties>>;
+  }>({ illusts: {}, properties: {} });
+  return Object.fromEntries(
+    Object.entries(illusts).map(([k, v]) => [
+      k,
+      { ...v, properties: properties[k] ?? {} },
+    ])
+  );
 }
 
 export async function addIllustInStore(
@@ -106,7 +119,26 @@ export async function addIllustInStore(
   const illusts = await getIllustsInStore();
 
   await chrome.storage.local.set({
-    illusts: { ...illusts, [illustId]: { artworks, info } },
+    illusts: {
+      ...illusts,
+      [illustId]: { artworks, info, _serial: Object.keys(illusts).length },
+    },
+  });
+}
+
+export async function setIllustPropertiesInStore(
+  illustId: string,
+  properties: {} = {}
+) {
+  const { properties: props } = await chrome.storage.local.get<{
+    properties: Record<string, Partial<{ omit: boolean }>>;
+  }>({ properties: {} });
+
+  await chrome.storage.local.set({
+    properties: {
+      ...props,
+      [illustId]: { ...(props[illustId] ?? {}), ...properties },
+    },
   });
 }
 

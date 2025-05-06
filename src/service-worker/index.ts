@@ -2,10 +2,7 @@ import JSZip from "jszip";
 
 import { IllustPages } from "../common/transport";
 import { registerListener } from "../common/chrome";
-
-function basename(path: string) {
-  return path.substring(path.lastIndexOf("/") + 1);
-}
+import { basename } from "../common/util";
 
 function downloadZip(zip: JSZip, filename: string) {
   const reader = new FileReader();

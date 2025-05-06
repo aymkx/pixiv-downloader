@@ -4,10 +4,7 @@ import {
   sendMessage,
 } from "../common/chrome";
 import { IllustInfo, IllustPages } from "../common/transport";
-
-function basename(path: string) {
-  return path.substring(path.lastIndexOf("/") + 1);
-}
+import { basename } from "../common/util";
 
 async function getIllustPages(illustId: string): Promise<unknown> {
   const url = new URL(`https://www.pixiv.net/ajax/illust/${illustId}/pages`);
