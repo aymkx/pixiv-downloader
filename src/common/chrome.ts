@@ -1,13 +1,15 @@
 import * as t from "io-ts";
 import type { Event, Message, MessageResponse } from "../common";
 import { IllustInfo, IllustPages } from "./transport";
+import { ContentScriptEvent } from "../content-script/event";
 
-export async function getTab(): Promise<chrome.tabs.Tab> {
+export async function getTab(): Promise<chrome.tabs.Tab & { id: number }> {
   const [tab] = await chrome.tabs.query({
     active: true,
     currentWindow: true,
   });
-  return tab;
+  if (tab.id !== undefined) return { ...tab, id: tab.id };
+  throw new Error("failed to get tab");
 }
 
 export async function sendMessage<
@@ -26,6 +28,26 @@ export async function sendMessage<E extends Event>(
   return await chrome.runtime.sendMessage<any, MessageResponse<E>>({
     event,
     payload,
+  });
+}
+
+export async function sendMessageToContentScript<
+  E extends Exclude<Message<ContentScriptEvent>, { payload: any }>["event"]
+>(tabId: number, event: E): Promise<MessageResponse<E>>;
+export async function sendMessageToContentScript<
+  E extends ContentScriptEvent,
+  P extends Extract<Message<E>, { payload: any }>["payload"]
+>(tabId: number, event: E, payload: P): Promise<MessageResponse<E>>;
+export async function sendMessageToContentScript<E extends Event>(
+  tabId: number,
+  event: E,
+  payload?: Message<E> extends { payload: unknown }
+    ? Message<E>["payload"]
+    : undefined
+): Promise<MessageResponse<E>> {
+  return await chrome.tabs.sendMessage<any, MessageResponse<E>>(tabId, {
+    event,
+    ...(payload ? { payload } : {}),
   });
 }
 

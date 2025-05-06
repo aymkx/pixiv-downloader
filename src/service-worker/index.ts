@@ -3,6 +3,7 @@ import JSZip from "jszip";
 import { IllustPages } from "../common/transport";
 import { registerListener } from "../common/chrome";
 import { basename } from "../common/util";
+import { contextMenusProperties } from "../common/contextMenus";
 
 function downloadZip(zip: JSZip, filename: string) {
   const reader = new FileReader();
@@ -23,7 +24,24 @@ function downloadZip(zip: JSZip, filename: string) {
   reader.addEventListener("loadend", onLoadend);
 }
 
-chrome.runtime.onInstalled.addListener(() => chrome.storage.local.clear());
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.clear();
+
+  Object.entries(contextMenusProperties).map(([k, v]) => {
+    if ("id" in v) delete v.id;
+    if (v.onclick) {
+      const onclick = v.onclick;
+      chrome.contextMenus.onClicked.addListener((info, tab) => {
+        if (info.menuItemId === k && tab) onclick(info, tab);
+      });
+      delete v.onclick;
+    }
+    chrome.contextMenus.create({
+      id: k,
+      ...v,
+    });
+  });
+});
 chrome.runtime.onStartup.addListener(() => chrome.storage.local.clear());
 
 registerListener(

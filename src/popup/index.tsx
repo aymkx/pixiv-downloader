@@ -5,7 +5,7 @@ import {
   useEffect,
   useState,
 } from "preact/compat";
-import { Button, sendMessageToContentScript } from "../common/popup";
+import { Button, sendCurrentTabAs } from "../common/popup";
 import {
   clearStoredIllusts,
   getIllustsInStore,
@@ -84,7 +84,7 @@ function App(): ReactElement {
     add: {
       text: "Add this artworks",
       style: "outline-primary",
-      onClick: () => sendMessageToContentScript("add", "click"),
+      onClick: () => sendCurrentTabAs("add"),
     },
     download: {
       text: "Download",
@@ -92,7 +92,7 @@ function App(): ReactElement {
       onClick: async () => {
         const illusts = await getIllustsInStore();
         if (Object.keys(illusts).length === 0) {
-          sendMessageToContentScript("download", "click");
+          sendCurrentTabAs("download");
         } else {
           const list = Object.entries(illusts)
             .filter(([_, v]) => !Boolean(v.properties.omit))
