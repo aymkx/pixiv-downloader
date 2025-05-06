@@ -27,20 +27,13 @@ function downloadZip(zip: JSZip, filename: string) {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.clear();
 
-  Object.entries(contextMenusProperties).map(([k, v]) => {
-    if ("id" in v) delete v.id;
-    if (v.onclick) {
-      const onclick = v.onclick;
-      chrome.contextMenus.onClicked.addListener((info, tab) => {
-        if (info.menuItemId === k && tab) onclick(info, tab);
-      });
-      delete v.onclick;
-    }
+  Object.entries(contextMenusProperties).map(([k, v]) =>
     chrome.contextMenus.create({
-      id: k,
       ...v,
-    });
-  });
+      id: k,
+      onclick: undefined,
+    })
+  );
 });
 chrome.runtime.onStartup.addListener(() => chrome.storage.local.clear());
 
@@ -88,4 +81,13 @@ registerListener("transport:save", async ({ illusts, ...options }) => {
   );
 
   downloadZip(zip, "out.zip");
+});
+
+Object.entries(contextMenusProperties).map(([k, v]) => {
+  if (v.onclick) {
+    const onclick = v.onclick;
+    chrome.contextMenus.onClicked.addListener((info, tab) => {
+      if (info.menuItemId === k && tab) onclick(info, tab);
+    });
+  }
 });
